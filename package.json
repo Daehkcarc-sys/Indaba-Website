@@ -1,6 +1,1 @@
-{
-	"dependencies": {
-		"tailwindcss": "^4.3.3",
-		"@tailwindcss/vite": "^4.3.3"
-	}
-}
+{"private":true,"scripts":{"dev":"pnpm --dir front dev","build":"pnpm --dir front build","lint":"pnpm --dir front lint","preview":"pnpm --dir front preview"}}

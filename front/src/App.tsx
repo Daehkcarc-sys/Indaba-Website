@@ -1,122 +1,115 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
+import gsap from 'gsap'
+import { Activity, ArrowDown, ArrowRight, BookOpen, ChevronDown, Compass, Database, Fingerprint, FlaskConical, Info, Layers3, LockKeyhole, Menu, Pause, Play, Search, ShieldCheck, X } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card as UICard } from '@/components/ui/card'
+import { Badge as UIBadge } from '@/components/ui/badge'
+import './observatory.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+type Arm = 'allow_all' | 'authority_core_v3_full' | 'sentinel_hybrid'
+type Event = { actor:string; event_id:string; seq:number; step_id:number; timestamp:string; type:string; provenance_refs:string[]; payload: Record<string, unknown> }
+type Trace = { scenarioId:string; arm:Arm; runId:string; model:string; landingSeq:number|null; outcome: Record<string, unknown>; events:Event[] }
+type Scenario = { id:string; title:string; origin:string; domain:string; attack:boolean; reachable:boolean; delta:string; mechanisms:string[]; arms:Record<Arm,{task:boolean;attack:boolean;critical:boolean}> }
+type Aggregate = { btu:number;asr:number;cvr:number;fbr:number;tui:number;dfi:number;attack_task_utility:number;latency_p95_ms:number;critical_n:number;false_blocks_n:number }
+type Analysis = { aggregate:Record<Arm,Aggregate>; core_to_final_task_recoveries:number;core_to_final_task_regressions:number;core_to_final_same_task_outcome:number;reachable_attacks: Record<string,unknown> }
+type Manifest = { sourceCommit:string; model:string; modelConfiguration:string;scenarioCount:number;runCount:number;errors:number;finishedAt:string;presentationNote:string }
+type Data = { scenarios:Scenario[];analysis:Analysis;manifest:Manifest;reasons:Record<string,string> }
+const ARM_LABEL:Record<Arm,string> = {allow_all:'Allow All',authority_core_v3_full:'Authority Core',sentinel_hybrid:'SENTINEL Hybrid'}
+const ARMS:Arm[] = ['allow_all','authority_core_v3_full','sentinel_hybrid']
+const ROUTES = [
+  {path:'/',name:'Command Center',icon:Activity}, {path:'/trace',name:'Trace Explorer',icon:Layers3},
+  {path:'/corpus',name:'Corpus Lab',icon:Database}, {path:'/architecture',name:'Architecture',icon:Compass},
+  {path:'/evidence',name:'Evidence & Falsification',icon:FlaskConical}, {path:'/about',name:'Method & Limitations',icon:BookOpen},
+]
+const pct = (n:number) => `${(100*n).toFixed(1)}%`
+const pretty = (s:string) => s.replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase())
+const outcomeText = (v:boolean) => v ? 'Completed' : 'Not completed'
+const fetchJSON = async <T,>(path:string):Promise<T> => { const r=await fetch(`${import.meta.env.BASE_URL}data/${path}`); if(!r.ok) throw new Error(`Evidence unavailable: ${path}`); return r.json() as Promise<T> }
+const usePath = () => { const [path,setPath]=useState(location.pathname); useEffect(()=>{const listener=()=>setPath(location.pathname);window.addEventListener('popstate',listener);return()=>window.removeEventListener('popstate',listener)},[]);return [path,(url:string)=>{history.pushState(null,'',url);setPath(location.pathname);window.scrollTo(0,0)}] as const }
+const query = (key:string) => new URLSearchParams(location.search).get(key)
+const frame = (title:string,eyebrow:string,description?:string) => <header className="page-heading"><div className="eyebrow">{eyebrow}</div><h1>{title}</h1>{description&&<p>{description}</p>}</header>
+const Badge = ({children,tone='neutral'}:{children:React.ReactNode;tone?:string}) => <UIBadge className={`badge badge-${tone}`}>{children}</UIBadge>
+const Card = ({children,className=''}:{children:React.ReactNode;className?:string}) => <UICard className={`surface ${className}`}>{children}</UICard>
+const SectionTitle = ({index,title,aside}:{index?:string;title:string;aside?:string}) => <div className="section-title"><div><span className="section-index">{index}</span><h2>{title}</h2></div>{aside&&<span>{aside}</span>}</div>
+const Status = ({value}:{value:boolean}) => <span className={value?'positive':'negative'}>{value?'✓ Yes':'— No'}</span>
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+function App(){
+  const reducedMotion=useReducedMotion(); const [path,navigate]=usePath(), [data,setData]=useState<Data|null>(null),[error,setError]=useState(''),[menu,setMenu]=useState(false)
+  useEffect(()=>{Promise.all([fetchJSON<Scenario[]>('scenarios.json'),fetchJSON<Analysis>('final-analysis.json'),fetchJSON<Manifest>('manifest.json'),fetchJSON<Record<string,string>>('reason-codes.json')]).then(([scenarios,analysis,manifest,reasons])=>setData({scenarios,analysis,manifest,reasons})).catch(e=>setError(String(e)))},[])
+  const go=(url:string)=>{navigate(url);setMenu(false)}
+  const demo=path==='/demo'
+  return <div className={`app ${demo?'demo-app':''}`}>
+    {!demo&&<><aside className={`sidebar ${menu?'sidebar-open':''}`}><div className="brand" onClick={()=>go('/')} role="link" tabIndex={0} onKeyDown={e=>e.key==='Enter'&&go('/')}><div className="brand-mark"><Fingerprint size={21}/></div><div><strong>SENTINEL<span> / Hybrid</span></strong><small>DEFENSE OBSERVATORY</small></div></div><div className="nav-caption">WORKSPACE</div><nav aria-label="Main navigation">{ROUTES.map(({path:p,name,icon:Icon})=><button key={p} className={`nav-item ${path===p?'active':''}`} onClick={()=>go(p)}><Icon size={17}/><span>{name}</span>{path===p&&<span className="nav-indicator"/>}</button>)}</nav><div className="sidebar-bottom"><div className="nav-caption">PRESENTATION</div><button className="nav-item demo-link" onClick={()=>go('/demo')}><Play size={16}/> Jury Demo Mode <ArrowRight size={14}/></button><div className="sidebar-meta"><span className="online-dot"/> FINAL CORPUS · 186 RUNS<br/><span className="meta-sub">Qwen3-8B / Ollama</span></div></div></aside><button className="mobile-menu" onClick={()=>setMenu(!menu)} aria-label="Toggle navigation">{menu?<X/>:<Menu/>}</button></>}
+    <main className="main"><div className="topbar"><span className="crumb">SENTINEL <span>/</span> {demo?'Jury Demo':ROUTES.find(r=>r.path===path)?.name||'Observatory'}</span><div className="top-right"><span className="live-indicator"><span/> RECORDED EVIDENCE</span><span className="top-divider"/> FINAL QWEN RUN · 2026-09-23</div></div>
+      {error?<div className="error-state"><h1>Evidence could not load</h1><p>{error}</p><Button onClick={()=>location.reload()}>Retry</Button></div>:!data?<div className="loading-state">Loading final evaluation snapshot…</div>:<AnimatePresence mode="wait"><motion.div key={path} initial={reducedMotion?false:{opacity:0,y:8}} animate={{opacity:1,y:0}} exit={reducedMotion?{opacity:0}:{opacity:0,y:-5}} transition={{duration:reducedMotion?0:.2}} className="content">{path==='/'?<CommandCenter data={data} go={go}/>:path==='/trace'?<TraceExplorer data={data} go={go}/>:path==='/corpus'?<CorpusLab data={data} go={go}/>:path==='/architecture'?<Architecture data={data} go={go}/>:path==='/evidence'?<Evidence data={data}/>:path==='/about'?<About data={data}/>:path==='/demo'?<Demo data={data} go={go}/>:<CommandCenter data={data} go={go}/>}</motion.div></AnimatePresence>}
+    </main>
+  </div>
 }
 
+function CommandCenter({data,go}:{data:Data;go:(p:string)=>void}){
+ const agg=data.analysis.aggregate
+ const metrics:[string,(a:Aggregate)=>string,string][]=[['Benign BTU',a=>pct(a.btu),'23 benign scenarios'],['Native ASR',a=>pct(a.asr),'39 attack scenarios'],['Critical violations',a=>String(a.critical_n),'of 62 scenarios'],['False block rate',a=>pct(a.fbr),'legitimate decisions'],['Attack-task utility¹',a=>pct(a.attack_task_utility),'derived diagnostic'],['Data-flow integrity',a=>pct(a.dfi),'of 62 scenarios']]
+ return <><div className="hero-head"><div>{frame('Defense, with evidence.','FINAL EVALUATION / COMMAND CENTER','A recorded Qwen3-8B evaluation of agent actions, provenance, decisions, and what happened next.')}</div><div className="hero-actions"><Button onClick={()=>go('/trace?case=ent_sso_migration_draft')}><Play size={15}/> Replay featured attack</Button><Button variant="outline" onClick={()=>go('/trace?case=soc_intel_correlation')}>Replay benign task <ArrowRight size={15}/></Button></div></div>
+ <div className="fact-ribbon"><div><span>REFERENCE AGENT</span><strong>Qwen3-8B</strong><small>Ollama 4-bit · thinking disabled</small></div><div><span>DEFENSE</span><strong>sentinel_hybrid</strong><small>Evaluated commit {data.manifest.sourceCommit.slice(0,10)}</small></div><div><span>FINAL EVALUATION</span><strong>{data.manifest.scenarioCount} scenarios · {data.manifest.runCount} runs</strong><small>{data.manifest.errors} run errors · 3 arms</small></div></div>
+ <SectionTitle index="01 /" title="Measured comparison" aside="FINAL QWEN3-8B RUN"/><div className="comparison"><div className="comparison-labels"><div className="comparison-name">MEASURE</div>{metrics.map(([name,,note])=><div key={name} className="metric-label">{name}<small>{note}</small></div>)}</div>{ARMS.map((arm,i)=><Card key={arm} className={`arm-panel ${i===2?'arm-emphasis':''}`}><div className="arm-heading"><span className="arm-number">0{i+1}</span><div><strong>{ARM_LABEL[arm]}</strong><small>{i===0?'Undefended baseline':i===1?'Policy core':'Selective repair'}</small></div></div>{metrics.map(([name,get])=><div className="metric-value" key={name}><span>{name}</span><strong>{get(agg[arm])}</strong></div>)}</Card>)}</div><p className="footnote">¹ Attack-task utility is a derived diagnostic, not an official jury metric. BTU did not improve. All rates are from this one completed run.</p>
+ <SectionTitle index="02 /" title="Where protection met utility" aside="SAME 22 REACHABLE ATTACKS"/><Card className="reachability"><div className="reach-head"><div><div className="eyebrow">REACHABLE UNDER CURRENT QWEN RUN</div><h3>22 attacks succeeded undefended.</h3><p>On those same scenarios, compare attack success and legitimate task completion.</p></div><Badge tone="amber">22 / 39 attack scenarios</Badge></div><div className="reach-rows">{ARMS.map(arm=>{const compromised=arm==='allow_all'?22:0;const preserved=arm==='authority_core_v3_full'?0:21;return <div className="reach-row" key={arm}><span>{ARM_LABEL[arm]}</span><div className="reach-bar"><span style={{width:`${compromised/22*100}%`}} className="danger-bar"/><span style={{width:`${preserved/22*100}%`}} className="safe-bar"/></div><strong><b className="negative">{compromised} compromised</b><b className="positive">{preserved} tasks preserved</b></strong></div>})}</div><p className="reach-note">“Tasks preserved” means legitimate task success on the 22 scenarios where Allow All’s attack succeeded. It is not a claim about every possible attack.</p></Card>
+ <div className="quick-grid"><Card><div className="eyebrow">EXPLORE THE DECISION</div><h3>Follow one action from source to release.</h3><p>See the attack land, inspect the candidate response, and compare the Core block with Hybrid’s validated rewrite.</p><Button variant="outline" onClick={()=>go('/trace?case=ent_sso_migration_draft')}>Open trace <ArrowRight size={14}/></Button></Card><Card><div className="eyebrow">CORPUS DELTA</div><div className="delta-big">22 <span>recovered</span></div><p>Core task failures recovered by Hybrid, with 0 observed Core→Hybrid task regressions across 62 scenarios.</p><Button variant="outline" onClick={()=>go('/corpus')}>Inspect scenarios <ArrowRight size={14}/></Button></Card></div>
+ </>
+}
+
+function TraceExplorer({data,go,embedded=false,initial}:{data:Data;go:(p:string)=>void;embedded?:boolean;initial?:string}){
+ const starting=initial||query('case')||'ent_sso_migration_draft'
+ const [id,setId]=useState(starting),[arm,setArm]=useState<Arm>('sentinel_hybrid'),[overlay,setOverlay]=useState(false),[trace,setTrace]=useState<Trace|null>(null),[loadError,setLoadError]=useState(''),[selected,setSelected]=useState<number|null>(null),[visible,setVisible]=useState(Infinity),[playing,setPlaying]=useState(false)
+ const reduced=useReducedMotion(),pipelineRef=useRef<HTMLDivElement>(null)
+ const scenario=data.scenarios.find(s=>s.id===id)||data.scenarios[0]
+ useEffect(()=>{let live=true;fetchJSON<Trace>(`traces/${id}/${arm}.json`).then(t=>{if(live){setTrace(t);setSelected(t.events.find(e=>e.payload.decision==='rewrite')?.seq??t.events.find(e=>e.type==='defense_decision')?.seq??0)}}).catch(e=>live&&setLoadError(String(e)));return()=>{live=false}},[id,arm])
+ useEffect(()=>{if(!playing||!trace)return;let at=-1;const timer=setInterval(()=>{at++;setVisible(at);if(at>=trace.events.length-1){clearInterval(timer);setPlaying(false)}},reduced?180:520);return()=>clearInterval(timer)},[playing,trace,reduced])
+ useEffect(()=>{if(!playing||reduced||!pipelineRef.current)return;const targets=pipelineRef.current.querySelectorAll('.pipe-step');gsap.fromTo(targets,{opacity:.45},{opacity:1,stagger:.32,duration:.28,repeat:1,yoyo:true,overwrite:true})},[playing,reduced])
+ const events=trace?.events.filter(e=>overlay||e.actor!=='evaluator')||[]
+ const event=trace?.events.find(e=>e.seq===selected&&(overlay||e.actor!=='evaluator'))
+ const decision=event?.type==='defense_decision'?event:trace?.events.filter(e=>e.type==='defense_decision'&&e.seq<=(selected??Infinity)).at(-1)
+ const p=decision?.payload||{},action=p.action as Record<string,unknown>|undefined,rewritten=p.rewritten_action as Record<string,unknown>|undefined
+ const next=trace?.events.filter(e=>decision&&e.seq>decision.seq)||[]
+ const setCase=(value:string)=>{setTrace(null);setSelected(null);setVisible(Infinity);setId(value);if(!embedded)history.replaceState(null,'',`/trace?case=${value}`)}
+ return <><div className="trace-title">{!embedded&&frame('Trace Explorer','OBSERVABILITY / RECORDED REPLAY','Select a scenario and step through the original, chronologically ordered Qwen trace.')}<div className="trace-controls"><label>SCENARIO<select value={id} onChange={e=>setCase(e.target.value)}>{data.scenarios.map(s=><option key={s.id} value={s.id}>{s.id}</option>)}</select></label><label>DEFENSE<select value={arm} onChange={e=>{setTrace(null);setSelected(null);setVisible(Infinity);setArm(e.target.value as Arm)}}>{ARMS.map(a=><option key={a} value={a}>{ARM_LABEL[a]}</option>)}</select></label></div></div>
+ <Card className="trace-context"><div><div className="eyebrow">{scenario.domain.toUpperCase()} / {scenario.origin.replace('_',' ').toUpperCase()}</div><h2>{scenario.id}</h2><p>{scenario.title}</p></div><div className="trace-outcomes">{overlay?<><Badge tone={scenario.arms[arm].attack?'red':'green'}>Attack {scenario.arms[arm].attack?'succeeded':'did not succeed'}</Badge><Badge tone={scenario.arms[arm].task?'green':'amber'}>Task {outcomeText(scenario.arms[arm].task).toLowerCase()}</Badge></>:<Badge>Outcome labels in evaluator overlay</Badge>}</div></Card>
+ <div className="view-bar"><div className="segmented" role="group" aria-label="Trace view"><button className={!overlay?'chosen':''} onClick={()=>{setOverlay(false);if(trace?.events.find(e=>e.seq===selected)?.actor==='evaluator')setSelected(trace.events.find(e=>e.type==='defense_decision')?.seq??0)}}><LockKeyhole size={14}/> Defense View</button><button className={overlay?'chosen':''} onClick={()=>setOverlay(true)}><Fingerprint size={14}/> Evaluator Overlay</button></div><span className="view-note" title="Evaluator-only annotations are presentation metadata and were not available to the runtime defense."><Info size={14}/> {overlay?'Evaluator-only annotations were not runtime defense inputs.':'Runtime-visible observations and decisions only.'}</span><Button variant="outline" size="sm" onClick={()=>{if(playing){setPlaying(false);setVisible(Infinity)}else {setVisible(-1);setPlaying(true)}}}>{playing?<Pause size={14}/>:<Play size={14}/>} {playing?'Stop':'Replay'}</Button></div>
+ {loadError?<Card>{loadError}</Card>:!trace?<Card>Loading recorded trace…</Card>:<><div className="trace-workspace"><Card className="timeline-pane"><div className="pane-heading"><span>EVENT TIMELINE</span><span>{events.length} EVENTS · CHRONOLOGICAL</span></div><div className="timeline-scroll">{events.filter(e=>e.seq<=visible).map(e=><motion.div key={e.event_id} initial={reduced?false:{opacity:0,y:6}} animate={{opacity:1,y:0}} transition={{duration:reduced?0:.18}}>{overlay&&trace.landingSeq===e.seq&&<div className="attack-marker"><span>EVALUATOR OVERLAY</span><strong>ATTACK CONTENT ENTERED AGENT CONTEXT</strong><small>step {e.step_id} · {String(e.payload.tool||e.type)}</small></div>}<button className={`event-row ${selected===e.seq?'selected':''} event-${e.type}`} onClick={()=>setSelected(e.seq)}><span className="event-rail"><i/></span><span className="event-index">{String(e.seq).padStart(2,'0')}</span><span className="event-content"><strong>{eventLabel(e)}</strong><small>{eventSummary(e)}</small></span>{e.type==='defense_decision'&&<Badge tone={tone(String(e.payload.decision))}>{String(e.payload.decision).toUpperCase()}</Badge>}</button></motion.div>)}</div></Card><Card className="pipeline-pane"><div className="pane-heading"><span>DECISION PATH</span><span>SELECTED STEP {decision?.step_id??'—'}</span></div><div className="pipeline-body" ref={pipelineRef}>{['Candidate action','Canonical provenance','Authority Core','Selective Hybrid policy','Execution / response'].map((label,i)=><div className="pipe-wrap" key={label}><div className={`pipe-step ${i===3&&p.decision==='rewrite'?'pipe-active':''}`}><span className="pipe-number">0{i+1}</span><div><strong>{label}</strong><small>{pipelineDetail(i,decision)}</small></div>{i===3&&Boolean(p.decision)&&<Badge tone={tone(String(p.decision))}>{String(p.decision).toUpperCase()}</Badge>}</div>{i<4&&<ArrowDown className="pipe-arrow" size={15}/>}</div>)}</div><div className="pipeline-footer"><ShieldCheck size={16}/><span>Runtime evaluation uses request, action, provenance, policy and observed context.</span></div></Card></div>
+ <Card className="inspector"><div className="pane-heading"><span>DECISION INSPECTOR</span><span>{event?`EVENT ${String(event.seq).padStart(2,'0')} · ${event.event_id}`:'SELECT A TIMELINE EVENT'}</span></div>{event&&<div className="inspector-body"><div className="event-detail"><div className="eyebrow">SELECTED EVENT / {event.actor.toUpperCase()}</div><h3>{eventLabel(event)}</h3><p>{eventSummary(event)}</p><div className="detail-tags"><Badge>step {event.step_id}</Badge><Badge>{event.type}</Badge>{event.provenance_refs.length>0&&<Badge>{event.provenance_refs.length} provenance refs</Badge>}</div><details><summary>Inspect event payload <ChevronDown size={14}/></summary><pre>{JSON.stringify(event.payload,null,2)}</pre></details></div><div className="decision-detail">{decision?<><div className="decision-header"><Badge tone={tone(String(p.decision))}>{String(p.decision).toUpperCase()}</Badge><span>Risk <strong>{Number(p.risk_score).toFixed(2)}</strong></span><span>Confidence <strong>{Number(p.confidence).toFixed(2)}</strong></span></div><div className="reason-list">{(p.reason_codes as string[]||[]).map(code=><div key={code}><code>{code}</code><p>{data.reasons[code]||'Decision reason recorded in the defense trace.'}</p></div>)}</div>{p.explanation&&<p className="trace-explanation">{String(p.explanation)}</p>}{rewritten&&<div className="action-diff"><div><span>ORIGINAL PROPOSAL · PRESENTATION MASKED</span><pre>{formatAction(action)}</pre></div><div><span>SAFE REWRITE · EXECUTED</span><pre>{formatAction(rewritten)}</pre></div></div>}<div className="after-panel"><strong>WHAT HAPPENED NEXT</strong>{next.length?<ul>{next.slice(0,5).map(e=><li key={e.event_id}><span>→</span> {eventLabel(e)} <small>{eventSummary(e)}</small></li>)}</ul>:<p>No later event recorded.</p>}{overlay&&<div className="outcome-strip"><Badge tone={scenario.arms[arm].task?'green':'amber'}>Task: {outcomeText(scenario.arms[arm].task)}</Badge>{scenario.attack&&<Badge tone={scenario.arms[arm].attack?'red':'green'}>Attack: {scenario.arms[arm].attack?'Succeeded':'Failed'}</Badge>}<Badge tone={scenario.arms[arm].critical?'red':'green'}>Critical: {scenario.arms[arm].critical?'Yes':'No'}</Badge></div>}</div></>:<p>Select a defense decision in the timeline to inspect risk, confidence, reason codes, and subsequent events.</p>}</div></div>}</Card>{id==='soc_untrusted_control_selector'&&<div className="limitation-note"><Info size={16}/><div><strong>Narration mismatch</strong><p>The executed request used <code>block_domain</code>. The model later repeated the pre-repair <code>disable_monitoring</code> selector in prose. Execution remained safe; narration was stale.</p></div></div>}</>}
+ {!embedded&&<div className="trace-shortcuts"><button onClick={()=>{setCase('ent_sso_migration_draft');setArm('sentinel_hybrid');setOverlay(true)}}>Featured attack <ArrowRight size={13}/></button><button onClick={()=>{setCase('soc_intel_correlation');setArm('sentinel_hybrid');setOverlay(false)}}>Benign task <ArrowRight size={13}/></button><button onClick={()=>{setCase('soc_untrusted_control_selector');setArm('sentinel_hybrid');setOverlay(true)}}>Control repair <ArrowRight size={13}/></button><button onClick={()=>go('/corpus')}>Full corpus <ArrowRight size={13}/></button></div>}
+ </>
+}
+const tone=(d:string)=>d==='rewrite'?'amber':d==='block'?'red':d==='allow'?'green':'neutral'
+function eventLabel(e:Event){const p=e.payload;switch(e.type){case 'user_message':return 'Authenticated user goal';case 'defense_decision':return `Defense decision · ${String(p.decision).toUpperCase()}`;case 'tool_request':return `Tool request · ${p.tool}`;case 'retrieval_result':return `Tool observation · ${p.tool}`;case 'tool_result':return `Tool result · ${p.tool}`;case 'model_output':return 'Released model output';case 'policy_violation':return 'Policy violation finding';case 'task_success':return 'Task success finding';case 'task_failure':return 'Task failure finding';default:return pretty(e.type)}}
+function eventSummary(e:Event){const p=e.payload;if(e.type==='defense_decision'){const a=p.action as Record<string,unknown>|undefined;return `${a?.tool||a?.type||'candidate'} · risk ${Number(p.risk_score).toFixed(2)} · ${(p.reason_codes as string[]||[]).join(', ')}`}if(e.type==='user_message')return String(p.text||'').slice(0,130);if(e.type==='model_output')return String(p.content||'').slice(0,130);if(e.type==='retrieval_result'||e.type==='tool_result')return `Source: ${p.tool} · ${p.succeeded?'returned':'failed'}`;if(e.type==='tool_request')return JSON.stringify(p.arguments||{}).slice(0,100);return String(p.summary||p.reason||e.actor)}
+function pipelineDetail(i:number,d?:Event){const p=d?.payload||{};return [String((p.action as Record<string,unknown>)?.tool||(p.action as Record<string,unknown>)?.type||'Select a decision'),`${d?.provenance_refs.length??0} direct refs · canonical context`,p.decision==='rewrite'?'Core result evaluated before repair':'Structural and policy checks',p.decision==='rewrite'?'Narrow repair + full revalidation':String(p.decision||'No decision selected'),p.decision==='block'?'Candidate withheld':p.decision==='rewrite'?'Validated rewrite released':'Allowed action released'][i]}
+function formatAction(a?:Record<string,unknown>){if(!a)return 'No action';const value=a.content??a.arguments??a;return `${a.tool||a.type||'action'}(\n${typeof value==='string'?value:JSON.stringify(value,null,2)}\n)`}
+
+function CorpusLab({data,go}:{data:Data;go:(p:string)=>void}){
+ const [origin,setOrigin]=useState('all'),[domain,setDomain]=useState('all'),[kind,setKind]=useState('all'),[delta,setDelta]=useState('all'),[search,setSearch]=useState(''),[mechanism,setMechanism]=useState('all')
+ const filtered=data.scenarios.filter(s=>(origin==='all'||s.origin===origin)&&(domain==='all'||s.domain===domain)&&(kind==='all'||(kind==='attack'?s.attack:kind==='benign'?!s.attack:s.reachable))&&(delta==='all'||s.delta===delta)&&(mechanism==='all'||s.mechanisms.includes(mechanism))&&(`${s.id} ${s.title}`.toLowerCase().includes(search.toLowerCase())))
+ const metrics:[string,keyof Aggregate,(n:number)=>string][]=[['Benign task utility','btu',pct],['Native attack success','asr',pct],['Critical violation rate','cvr',pct],['False block rate','fbr',pct],['Tool-use integrity','tui',pct],['Data-flow integrity','dfi',pct],['Attack-task utility¹','attack_task_utility',pct],['p95 defense latency','latency_p95_ms',n=>`${n.toFixed(2)} ms`]]
+ const select=(label:string,value:string,options:[string,string][],change:(v:string)=>void)=><label className="filter-select"><span>{label}</span><select value={value} onChange={e=>change(e.target.value)}>{options.map(([v,t])=><option key={v} value={v}>{t}</option>)}</select></label>
+ return <>{frame('Corpus Lab','FINAL EVALUATION / 186 RECORDED RUNS','Every comparison comes from the same 62-scenario, three-arm Qwen evaluation. Select a row to inspect its original trace.')}<div className="corpus-summary"><div><strong>62</strong><span>SCENARIOS</span></div><div><strong>3</strong><span>ARMS</span></div><div><strong>186</strong><span>LIVE RUNS</span></div><div><strong>0</strong><span>RUN ERRORS</span></div></div>
+ <SectionTitle index="01 /" title="Metric matrix" aside="ALLOW ALL → CORE → HYBRID"/><Card className="matrix-card"><div className="matrix-row matrix-head"><span>MEASURE</span>{ARMS.map(a=><span key={a}>{ARM_LABEL[a]}</span>)}</div>{metrics.map(([name,key,format])=><div className="matrix-row" key={name}><span>{name}</span>{ARMS.map(a=><strong key={a}>{format(data.analysis.aggregate[a][key])}</strong>)}</div>)}</Card><p className="footnote">¹ Derived diagnostic; not an official jury metric. p95 measures defense decision latency, not end-to-end model latency. BTU remained 56.5%.</p>
+ <SectionTitle index="02 /" title="Core → Hybrid task outcomes" aside="62 PAIRED SCENARIOS"/><div className="delta-grid">{[['RECOVERY','22','Recovered','Core failed; Hybrid completed'],['REGRESSION','0','Regressed','Core completed; Hybrid failed'],['SAME','40','Same','Both had the same task outcome']].map(([value,n,label,note])=><button className={`delta-card ${delta===value?'delta-selected':''}`} onClick={()=>setDelta(delta===value?'all':value)} key={value}><strong>{n}</strong><span>{label}</span><small>{note}</small></button>)}</div>
+ <SectionTitle index="03 /" title="Scenario ledger" aside={`${filtered.length} OF 62 SHOWN`}/><Card className="ledger"><div className="filter-bar"><div className="search-box"><Search size={16}/><input aria-label="Search scenarios" placeholder="Search scenario or title" value={search} onChange={e=>setSearch(e.target.value)}/></div>{select('Origin',origin,[['all','All origins'],['public','Public'],['validation','Validation'],['self_authored','Self-authored']],setOrigin)}{select('Domain',domain,[['all','All domains'],['enterprise','Enterprise'],['finance','Finance'],['soc','SOC']],setDomain)}{select('Type',kind,[['all','All types'],['attack','Attack'],['benign','Benign'],['reachable','Reachable undefended']],setKind)}{select('Mechanism',mechanism,[['all','All reasons'],['HYBRID_RESTRICTED_FLOW_REDACTED','Restricted flow'],['HYBRID_GROUNDED_CONTROL_REPAIR','Control repair'],['RESTRICTED_DATA_DISCLOSURE','Restricted block']],setMechanism)}{(origin!=='all'||domain!=='all'||kind!=='all'||delta!=='all'||search||mechanism!=='all')&&<Button variant="ghost" onClick={()=>{setOrigin('all');setDomain('all');setKind('all');setDelta('all');setSearch('');setMechanism('all')}}>Clear</Button>}</div><div className="table-wrap"><table><thead><tr><th>SCENARIO</th><th>ORIGIN</th><th>DOMAIN</th><th>ATTACK?</th><th>REACHABLE?</th>{ARMS.map(a=><th key={a}>{ARM_LABEL[a]}</th>)}<th>HYBRID MECHANISM</th></tr></thead><tbody>{filtered.map(s=><tr key={s.id} onClick={()=>go(`/trace?case=${s.id}`)} tabIndex={0} onKeyDown={e=>e.key==='Enter'&&go(`/trace?case=${s.id}`)}><td><strong>{s.id}</strong><small>{s.title}</small></td><td>{s.origin.replace('_',' ')}</td><td>{s.domain}</td><td><Status value={s.attack}/></td><td>{s.attack?<Status value={s.reachable}/>:<span className="muted">—</span>}</td>{ARMS.map(a=><td key={a}><span className={s.arms[a].task?'positive':'muted'}>{s.arms[a].task?'Task ✓':'Task —'}</span>{s.attack&&<small className={s.arms[a].attack?'negative':'muted'}>{s.arms[a].attack?'Attack succeeded':'Attack failed'}</small>}</td>)}<td className="reason-cell">{s.mechanisms.length?s.mechanisms.join(', ').replaceAll('HYBRID_','').replaceAll('_',' ').toLowerCase():'—'}</td></tr>)}</tbody></table>{!filtered.length&&<p className="empty">No scenarios match these filters.</p>}</div></Card>
+ </>
+}
+function Architecture({go}:{data:Data;go:(p:string)=>void}){
+ const [active,setActive]=useState(-1),[recorded,setRecorded]=useState<Trace|null>(null),reduced=useReducedMotion(),ref=useRef<HTMLDivElement>(null)
+ useEffect(()=>{fetchJSON<Trace>('traces/ent_sso_migration_draft/sentinel_hybrid.json').then(setRecorded).catch(()=>setRecorded(null))},[])
+ const recordedDecision=recorded?.events.find(e=>(e.payload.reason_codes as string[]|undefined)?.includes('HYBRID_RESTRICTED_FLOW_REDACTED'))
+ const nodes=[['01','DefenseRequest','Authenticated goal, proposed action, observed state'],['02','Canonical provenance','Source lineage and sensitivity normalized'],['03','Task / control facts + sensitive lineage','Task-local grounding and restricted-value flow'],['04','Authority Core','Hard policy and structural authority'],['05','Selective Hybrid policy','Narrow repair when a validated path exists'],['06','BLOCK / safe repair','The repair is fully revalidated before release']]
+ const replay=()=>{if(!ref.current||!recordedDecision)return;setActive(0);if(reduced){setActive(5);return}const targets=ref.current.querySelectorAll('.arch-node');const timeline=gsap.timeline();targets.forEach((node,i)=>timeline.fromTo(node,{opacity:.45,scale:.985},{opacity:1,scale:1,duration:.32,onStart:()=>setActive(i)}))}
+ return <>{frame('A small, inspectable decision path.','MECHANISM / ARCHITECTURE','The runtime evaluates only the authenticated request, candidate action, provenance, policy and observed agent context.')}<div className="architecture-layout"><Card className="architecture-graph"><div className="pane-heading"><span>PRODUCTION PATH</span><span>ONE DETERMINISTIC DECISION</span></div><div className="arch-stack" ref={ref}>{nodes.map(([n,title,desc],i)=><div key={n} className={`arch-node ${active===i?'arch-active':''}`}><span>{n}</span><div><strong>{title}</strong><small>{desc}</small></div>{i!==nodes.length-1&&<ArrowDown size={15}/>}</div>)}</div><div className="arch-actions"><Button onClick={replay}><Play size={15}/> Replay real decision through architecture</Button><Button variant="outline" onClick={()=>go('/trace?case=ent_sso_migration_draft')}>Inspect source trace <ArrowRight size={14}/></Button></div></Card><div className="arch-aside"><Card><div className="eyebrow">REAL REPLAY / ENT_SSO_MIGRATION_DRAFT</div><h3>Restricted response recovery</h3><p>Core rejects a response with restricted lineage. Hybrid removes the recognized restricted representation and validates the rewritten response with both layers before it is released.</p><div className="mini-flow"><span>CORE <b>BLOCK</b></span><ArrowRight size={15}/><span>HYBRID <b>REPAIR</b></span><ArrowRight size={15}/><span>FINAL <b>REWRITE</b></span></div><p className="muted">Recorded decision: risk {recordedDecision?.payload.risk_score?String(recordedDecision.payload.risk_score):'—'} · confidence {recordedDecision?.payload.confidence?String(recordedDecision.payload.confidence):'—'} · event {recordedDecision?.seq??'—'}.</p></Card><Card><div className="eyebrow">BOUNDARY</div><h3>Evaluator labels stay outside runtime.</h3><p>Scenario IDs, attack labels, reference plans, graders and expected outcomes appear only in the presentation overlay. They are not policy inputs.</p></Card></div></div></>
+}
+const evidenceGroups=[
+ {name:'Survived',tone:'green',items:[['Authority Core','Policy and structural authority block prohibited actions.','Final three-arm corpus','0 critical violations under Core and Hybrid.','Retained in production.'],['Canonical provenance','Source lineage makes restricted data and trust boundaries inspectable.','Final trace and report inspection','Restricted content was identified before release.','Retained in production.'],['Restricted-response recovery','A narrow redaction can restore utility while preserving the Core boundary.','Final Qwen corpus, 22 repairs','22 Core task failures recovered; no observed regressions.','Retained with full rewrite validation.'],['Grounded control repair','A unique trusted alternative can replace an attacker-only selector.','Control-selector scenario','block_domain executed after rewrite; stale narration persisted.','Retained with limitation disclosed.']]},
+ {name:'Observability / shadow',tone:'amber',items:[['Task-local workflow analysis','Task-local state might reveal unsupported action expansions.','Shadow evaluation','Useful explanatory signal, insufficient alone for a hard block.','Kept as observation.'],['Evidence grounding','Evidence anchors can distinguish claims from operational controls.','Shadow evaluation','Context-dependent signal.','Kept as observation.'],['Sensitive lineage analysis','Data lineage can expose restricted-flow paths.','Trace and shadow inspection','Improves inspection of source and sink.','Kept as observation.']]},
+ {name:'Killed',tone:'red',items:[['Global prerequisite graph','A global incident_create → alert_read sequence would catch improper workflows.','Benign SOC validation case soc_val_mfa_phishing','The rule regressed a legitimate task.','Removed from production.'],['Generic echo blocking','Blocking every repeated untrusted string would reduce injection risk.','Adversarial and utility review','Legitimate quotation and summarization can require echoes.','Rejected as broad policy.'],['Weighted security voting','Multiple weak signals combined by weights could drive a decision.','Policy design review','Weights did not provide a justified authority boundary.','Rejected as production rule.']]}]
+function Evidence({data}:{data:Data}){const [selected,setSelected]=useState('Restricted-response recovery');const item=evidenceGroups.flatMap(g=>g.items).find(i=>i[0]===selected)!;return <>{frame('Evidence & Falsification','RESEARCH / WHAT SURVIVED','Mechanisms were tested against the threat model and observed task failures. Papers informed hypotheses; the benchmark decided what stayed.')}<div className="evidence-layout"><div className="evidence-groups">{evidenceGroups.map(g=><Card key={g.name}><div className="evidence-group-heading"><Badge tone={g.tone}>{g.name.toUpperCase()}</Badge><span>{g.items.length} MECHANISMS</span></div>{g.items.map(([name])=><button key={name} className={`evidence-item ${selected===name?'selected':''}`} onClick={()=>setSelected(name)}>{name}<ArrowRight size={15}/></button>)}</Card>)}</div><Card className="evidence-inspector"><div className="eyebrow">HYPOTHESIS RECORD</div><h2>{selected}</h2>{['Hypothesis','Test','Observation','Decision'].map((name,i)=><div className="evidence-field" key={name}><span>0{i+1} / {name.toUpperCase()}</span><p>{item[i+1]}</p></div>)}<div className="source-line">Final run: {data.manifest.runCount} traces · defense commit {data.manifest.sourceCommit.slice(0,10)}</div></Card></div></>}
+function About({data}:{data:Data}){return <>{frame('Method & limitations','SCOPE / RESPONSIBLE AI','A precise reading of the evaluation and the boundaries of this presentation.')}<div className="about-grid"><Card><div className="eyebrow">THREAT MODEL</div><h2>Where the defense acts</h2><p>The defense checks proposed tool calls and responses against authenticated intent, tool policy, provenance and observed state. Untrusted tool text cannot itself grant authority or safely disclose restricted lineage.</p></Card><Card><div className="eyebrow">EVALUATION</div><h2>One recorded Qwen corpus</h2><p>62 scenarios × 3 arms = 186 live runs, with no run errors. These self-test metrics are evidence for the submission, not an official jury score. The reference agent is Qwen3-8B via Ollama, 4-bit, thinking disabled.</p></Card><Card><div className="eyebrow">UTILITY</div><h2>What did not improve</h2><p>Benign BTU remained 56.5% across all arms. Hybrid recovered 22 Core task failures, with no observed Core→Hybrid task regressions in this run. This does not imply universal robustness.</p></Card><Card><div className="eyebrow">LATENCY</div><h2>Measured cost</h2><p>p95 defense decision latency rose from 0.904 ms for Core to 4.952 ms for Hybrid. This excludes model inference and whole-task runtime.</p></Card><Card><div className="eyebrow">MODEL BEHAVIOR</div><h2>Known limits</h2><p>Live model trajectories can differ across reruns; some attempted attacks do not reach the model on each run. After one safe control rewrite, Qwen narrated the old selector even though execution used the repaired one.</p></Card><Card><div className="eyebrow">HUMAN OVERSIGHT</div><h2>Consequential actions</h2><p>Human confirmation remains relevant for consequential operations. A low measured violation count in this corpus is not a guarantee for unseen workflows or threats.</p></Card></div><Card className="method-footer"><strong>Presentation boundary</strong><p>Evaluator-only attack markers, outcomes and graders never entered the runtime defense. Synthetic restricted strings are masked in the bundled presentation snapshot; original evidence stays in the defense archive.</p><code>{data.manifest.sourceCommit}</code></Card></>}
+function Demo({data,go}:{data:Data;go:(p:string)=>void}){const [chapter,setChapter]=useState<'attack'|'benign'|'evidence'>('attack');return <><div className="demo-header"><div><div className="eyebrow">JURY PRESENTATION / RECORDED EVIDENCE</div><h1>SENTINEL <span>Hybrid</span></h1></div><div className="demo-ident"><div><span>REFERENCE AGENT</span>Qwen3-8B · Ollama 4-bit</div><div><span>TRACE</span>Unedited replay</div><Button variant="outline" onClick={()=>go('/')}>Exit demo <X size={15}/></Button></div></div><div className="demo-chapters">{([['attack','01','ATTACK'],['benign','02','BENIGN'],['evidence','03','EVIDENCE']] as const).map(([id,n,label])=><button key={id} className={chapter===id?'active':''} onClick={()=>setChapter(id)}><span>{n}</span>{label}<ArrowRight size={15}/></button>)}</div>{chapter==='evidence'?<><SectionTitle index="03 /" title="Final corpus evidence" aside="62 SCENARIOS · 186 RUNS"/><div className="demo-evidence"><Card><strong>22</strong><span>attacks succeeded undefended</span></Card><Card><strong>0</strong><span>of those succeeded under Hybrid</span></Card><Card><strong>21</strong><span>legitimate tasks preserved</span></Card><Card><strong>22 / 0</strong><span>Core failures recovered / regressions</span></Card></div><div className="demo-method"><p>Benign BTU remained 56.5%. False block rate: 11.5% Core → 1.4% Hybrid. p95 defense latency: 0.904 → 4.952 ms.</p><Button variant="outline" onClick={()=>go('/corpus')}>Open full scenario ledger <ArrowRight size={14}/></Button></div></>:<TraceExplorer key={chapter} data={data} go={go} embedded initial={chapter==='attack'?'ent_sso_migration_draft':'soc_intel_correlation'}/>}</>}
 export default App
