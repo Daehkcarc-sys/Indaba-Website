@@ -28,6 +28,9 @@ importers:
       cn:
         specifier: ^0.4.0
         version: 0.4.0
+      drawably:
+        specifier: ^0.4.2
+        version: 0.4.2(react@19.3.0)
       gsap:
         specifier: ^3.15.0
         version: 3.15.0
@@ -971,6 +974,14 @@ packages:
   dotenv@17.4.2:
     resolution: {integrity: sha512-nI4U3TottKAcAD9LLud4Cb7b2QztQMUEfHbvhTH09bqXTxnSie8WnjPALV/WMCrJZ6UV/qHJ6L03OqO3LcdYZw==}
     engines: {node: '>=12'}
+
+  drawably@0.4.2:
+    resolution: {integrity: sha512-kHLnj08iHHVgwXxn7htKszWMlGIOy+CqUTekInCwoAqITwIAYjD4E/K7PMF6GLj5bM/t7sxysv1WmVGPOKDJzA==}
+    peerDependencies:
+      react: '>=18 <20'
+    peerDependenciesMeta:
+      react:
+        optional: true
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -3136,6 +3147,10 @@ snapshots:
       is-obj: 2.0.0
 
   dotenv@17.4.2: {}
+
+  drawably@0.4.2(react@19.3.0):
+    optionalDependencies:
+      react: 19.3.0
 
   dunder-proto@1.0.1:
     dependencies:
