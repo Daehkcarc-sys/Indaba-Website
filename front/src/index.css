@@ -186,6 +186,56 @@
 }
 ;
 
+[data-theme="notebook"] {
+    --background: oklch(0.9720 0.0080 85);
+    --foreground: oklch(0.2200 0.0150 60);
+    --card: oklch(0.9860 0.0060 85);
+    --card-foreground: oklch(0.2200 0.0150 60);
+    --popover: oklch(0.9860 0.0060 85);
+    --popover-foreground: oklch(0.2200 0.0150 60);
+    --primary: oklch(0.3300 0.0700 45);
+    --primary-foreground: oklch(0.9850 0.0060 85);
+    --secondary: oklch(0.9350 0.0130 80);
+    --secondary-foreground: oklch(0.2600 0.0200 55);
+    --muted: oklch(0.9350 0.0130 80);
+    --muted-foreground: oklch(0.4600 0.0250 55);
+    --accent: oklch(0.8950 0.0450 75);
+    --accent-foreground: oklch(0.2400 0.0250 55);
+    --destructive: oklch(0.5400 0.1900 27);
+    --destructive-foreground: oklch(0.9850 0.0060 85);
+    --border: oklch(0.8600 0.0180 75);
+    --input: oklch(0.8600 0.0180 75);
+    --ring: oklch(0.6400 0.0500 60);
+    --chart-1: oklch(0.6100 0.1400 55);
+    --chart-2: oklch(0.5400 0.1600 40);
+    --chart-3: oklch(0.4700 0.1500 250);
+    --chart-4: oklch(0.5600 0.1700 145);
+    --chart-5: oklch(0.5800 0.2000 25);
+    --radius: 0.375rem;
+    --sidebar: oklch(0.9500 0.0110 80);
+    --sidebar-foreground: oklch(0.2200 0.0150 60);
+    --sidebar-primary: oklch(0.3300 0.0700 45);
+    --sidebar-primary-foreground: oklch(0.9850 0.0060 85);
+    --sidebar-accent: oklch(0.8950 0.0450 75);
+    --sidebar-accent-foreground: oklch(0.2400 0.0250 55);
+    --sidebar-border: oklch(0.8600 0.0180 75);
+    --sidebar-ring: oklch(0.6400 0.0500 60);
+    --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+    --font-serif: 'iA Writer Duospace', ui-serif, Georgia, "Times New Roman", serif;
+    --font-mono: 'Geist Mono Variable', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --shadow-color: oklch(0.3 0.05 60);
+    --shadow-opacity: 0.08;
+    --letter-spacing: 0.002em;
+}
+
+[data-theme="notebook"] body {
+    background-image:
+        linear-gradient(var(--border) 1px, transparent 1px);
+    background-size: 100% 1.7rem;
+    background-position: 0 4.2rem;
+    background-attachment: local;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
